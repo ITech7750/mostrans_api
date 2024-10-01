@@ -3,7 +3,7 @@ package predict;
 import java.util.ArrayDeque;
 
 public class Predictor {
-    private class BfsNodeInfo {
+    private static class BfsNodeInfo {
         private Graph.Node node;
         private int load;
 
@@ -33,7 +33,6 @@ public class Predictor {
     private int startNodeIndex;
     private int additionalLoad;
     private int centerRadius;
-    private int totalLoad;
 
     public Predictor setGraph(Graph graph) {
         this.graph = graph;
