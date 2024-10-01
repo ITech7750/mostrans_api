@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import ru.itech.dto.PassengerFlowRequest
 import ru.itech.dto.StationDTO
+import ru.itech.dto.Temp
 import ru.itech.service.StationService
 
 @RestController
@@ -17,16 +18,6 @@ import ru.itech.service.StationService
 class StationController(
     private val stationService: StationService,
 ) {
-    // 1. Получить все станции по времени
-    @Operation(summary = "Получить станции по дате и времени", description = "Возвращает все станции на основе переданного времени")
-    @PostMapping("/by-datetime")
-    fun getStationsByDateTime(
-        @RequestBody request: Map<String, String>,
-    ): ResponseEntity<List<StationDTO>> {
-        val datetime = request["datetime"] ?: return ResponseEntity.badRequest().build()
-        val stations = stationService.getStationsByDateTime(datetime)
-        return ResponseEntity.ok(stations)
-    }
 
     // 2. Создать новую станцию с параметрами
     @Operation(summary = "Создать новую станцию", description = "Создаёт станцию с указанными параметрами")
@@ -71,7 +62,7 @@ class StationController(
 
 
     @PostMapping("/predict")
-    @Operation(summary = "Прогнозирование пассажиропотока", description = "Прогнозирование пассажиропотока на основе входных данных")
+    @Operation(summary = "Прогнозирование пассажиропотока", description = "Прогнозирование пассажиропотока с StationDTO")
     fun predictPassengerFlow(
         @Parameter(description = "Данные для прогноза", required = true)
         @RequestBody request: PassengerFlowRequest
@@ -88,5 +79,23 @@ class StationController(
         return ResponseEntity.ok(stations)
     }
 
+
+    @Operation(summary = "Прогнозирование пассажиропотока", description = "Прогнозирование пассажиропотока c Temp ")
+    @PostMapping("/by-datetime")
+    fun getStationsByDateTime(
+        @Parameter(description = "Данные для прогноза", required = true)
+        @RequestBody request: PassengerFlowRequest
+    ): ResponseEntity<List<Temp>> {
+        // Вызываем сервис для предсказания
+        val stations = stationService.getStationsByDateTime(
+            line = request.line,
+            name = request.name,
+            squareMeters = request.squareMeters,
+            buildingType = request.buildingType,
+            datetime = request.datetime
+        )
+
+        return ResponseEntity.ok(stations)
+    }
 
 }

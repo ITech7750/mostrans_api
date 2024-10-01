@@ -6,7 +6,9 @@ import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import ru.itech.dto.StationDTO
+import ru.itech.dto.Temp
 import ru.itech.dto.toEntity
+import ru.itech.dto.toTemp
 import ru.itech.entity.toDTO
 import ru.itech.entity.StationGraph
 import ru.itech.entity.StationPredictor
@@ -52,32 +54,54 @@ open class StationServiceImpl(
     }
 
     // Пример метода получения станций по дате/времени
-    override fun getStationsByDateTime(datetime: String): List<StationDTO> {
-        val graph: Graph = Graph()
-        graph.addNode(Graph.Node(1, 3))
-        graph.addNode(Graph.Node(1, 3))
-        graph.addNode(Graph.Node(1, 7))
-        graph.addNode(Graph.Node(1, 20))
-
-        graph.addEdge(0, 2)
-        graph.addEdge(1, 2)
-        graph.addEdge(3, 2)
-
-        val predictor: Predictor = Predictor()
-        predictor
-            .setGraph(graph)
-            .setStartNodeIndex(2)
-            .setAdditionalLoad(100)
-            .setCenterRadius(5)
-            .calculateLoad()
-
-        for (i in 0 until graph.getNodeCount()) {
-            println(graph.getNode(i).getPassengerLoad())
+    override fun getStationsByDateTime(
+                                       line: String,
+                                       name: String,
+                                       squareMeters: Double?,
+                                       buildingType: String?,
+                                       datetime: String
+    ): List<Temp> {
+        // Получаем все станции и их актуальный поток на момент времени datetime
+        val stations = stationRepository.findAll().map { station ->
+            val passengerFlowAtDatetime = station.getFlowByDatetime(datetime) ?: 0
+            station.toDTO(passengerFlowAtDatetime)
         }
 
-        return stationRepository.findAll().map { station ->
-            val latestPassengerFlow = stationPassengerFlowRepository.findTopByStationOrderByDatetimeDesc(station)?.passengerFlow
-            station.toDTO(latestPassengerFlow)
+        // Строим граф станций
+        val stationGraph = buildStationGraph(stations)
+        println("ok")
+        // Поиск индекса станции по имени и линии
+        val startStationIndex = stationGraph.getAllStations().indexOfFirst { it.name == name && it.line == line }
+
+        if (startStationIndex == -1) {
+            throw Exception("Station with name '$name' on line '$line' not found")
+        }
+
+        // Получаем центр радиуса из поля distance_from_center станции
+        val centerRadius = stationGraph.getAllStations()[startStationIndex].distanceFromCenter
+
+        // Предсказание пассажиропотока с использованием StationPredictor
+        val predictor = StationPredictor()
+        predictor.predictForStation(
+            stationGraph = stationGraph,
+            startStationIndex = startStationIndex,
+            additionalLoad = squareMeters?.toInt() ?: 0,
+            centerRadius = centerRadius
+        )
+
+        // Возвращаем обновленные данные о станциях с предсказанными потоками
+        return stationGraph.getAllStations().map { station ->
+            // Получаем текущий пассажиропоток из базы данных на момент времени datetime
+            val currentFlow = station.getFlowByDatetime(datetime) ?: 0
+            val predictedFlow = station.passengerLoad
+
+            // Добавляем предсказанный поток к текущему потоку
+            val totalFlow = currentFlow + predictedFlow
+            println(station.toDTO(totalFlow).toTemp())
+            // Создаём DTO с обновленным пассажиропотоком
+            station.toDTO(totalFlow).toTemp()
+
+
         }
     }
 

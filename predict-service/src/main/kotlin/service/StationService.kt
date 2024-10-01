@@ -3,6 +3,7 @@ package ru.itech.service
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import ru.itech.dto.StationDTO
+import ru.itech.dto.Temp
 
 @Service
 interface StationService {
@@ -12,7 +13,13 @@ interface StationService {
 
     fun getStationById(id: Long): StationDTO
 
-    fun getStationsByDateTime(datetime: String): List<StationDTO>
+    fun getStationsByDateTime(
+        line: String,
+        name: String,
+        squareMeters: Double?,
+        buildingType: String?,
+        datetime: String
+    ): List<Temp>
 
     fun createStation(stationDTO: StationDTO): StationDTO
 
