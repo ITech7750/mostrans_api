@@ -78,24 +78,4 @@ class StationController(
 
         return ResponseEntity.ok(stations)
     }
-
-
-    @Operation(summary = "Прогнозирование пассажиропотока", description = "Прогнозирование пассажиропотока c Temp ")
-    @PostMapping("/by-datetime")
-    fun getStationsByDateTime(
-        @Parameter(description = "Данные для прогноза", required = true)
-        @RequestBody request: PassengerFlowRequest
-    ): ResponseEntity<List<Temp>> {
-        // Вызываем сервис для предсказания
-        val stations = stationService.getStationsByDateTime(
-            line = request.line,
-            name = request.name,
-            squareMeters = request.squareMeters,
-            buildingType = request.buildingType,
-            datetime = request.datetime
-        )
-
-        return ResponseEntity.ok(stations)
-    }
-
 }

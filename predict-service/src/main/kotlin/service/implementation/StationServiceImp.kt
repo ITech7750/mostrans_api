@@ -53,58 +53,6 @@ open class StationServiceImpl(
         return station.toDTO(latestPassengerFlow)
     }
 
-    // Пример метода получения станций по дате/времени
-    override fun getStationsByDateTime(
-                                       line: String,
-                                       name: String,
-                                       squareMeters: Double?,
-                                       buildingType: String?,
-                                       datetime: String
-    ): List<Temp> {
-        // Получаем все станции и их актуальный поток на момент времени datetime
-        val stations = stationRepository.findAll().map { station ->
-            val passengerFlowAtDatetime = station.getFlowByDatetime(datetime) ?: 0
-            station.toDTO(passengerFlowAtDatetime)
-        }
-
-        // Строим граф станций
-        val stationGraph = buildStationGraph(stations)
-        println("ok")
-        // Поиск индекса станции по имени и линии
-        val startStationIndex = stationGraph.getAllStations().indexOfFirst { it.name == name && it.line == line }
-
-        if (startStationIndex == -1) {
-            throw Exception("Station with name '$name' on line '$line' not found")
-        }
-
-        // Получаем центр радиуса из поля distance_from_center станции
-        val centerRadius = stationGraph.getAllStations()[startStationIndex].distanceFromCenter
-
-        // Предсказание пассажиропотока с использованием StationPredictor
-        val predictor = StationPredictor()
-        predictor.predictForStation(
-            stationGraph = stationGraph,
-            startStationIndex = startStationIndex,
-            additionalLoad = squareMeters?.toInt() ?: 0,
-            centerRadius = centerRadius
-        )
-
-        // Возвращаем обновленные данные о станциях с предсказанными потоками
-        return stationGraph.getAllStations().map { station ->
-            // Получаем текущий пассажиропоток из базы данных на момент времени datetime
-            val currentFlow = station.getFlowByDatetime(datetime) ?: 0
-            val predictedFlow = station.passengerLoad
-
-            // Добавляем предсказанный поток к текущему потоку
-            val totalFlow = currentFlow + predictedFlow
-            println(station.toDTO(totalFlow).toTemp())
-            // Создаём DTO с обновленным пассажиропотоком
-            station.toDTO(totalFlow).toTemp()
-
-
-        }
-    }
-
     fun buildStationGraph(stations: List<StationDTO>): StationGraph {
         val stationGraph = StationGraph()
 
@@ -134,7 +82,19 @@ open class StationServiceImpl(
         return stationGraph
     }
 
+    fun calculateAdditionalLoad(squareMeters: Double, buildingType: String): Int {
+        var people = squareMeters / when (buildingType) {
+            "office" -> 35
+            "residential" -> 25
+            else -> throw Exception("Unknown building type '$buildingType'")
+        }
 
+        //трудоспособное население
+        people *= 0.57;
+        //те, кто используют ОТ
+        people *= 0.7;
+        return people.toInt()
+    }
 
     override fun predictPassengerFlow(
         line: String,
@@ -159,30 +119,16 @@ open class StationServiceImpl(
             throw Exception("Station with name '$name' on line '$line' not found")
         }
 
-        // Получаем центр радиуса из поля distance_from_center станции
-        val centerRadius = stationGraph.getAllStations()[startStationIndex].distanceFromCenter
-
         // Предсказание пассажиропотока с использованием StationPredictor
         val predictor = StationPredictor()
         predictor.predictForStation(
             stationGraph = stationGraph,
             startStationIndex = startStationIndex,
-            additionalLoad = squareMeters?.toInt() ?: 0,
-            centerRadius = centerRadius
+            additionalLoad = calculateAdditionalLoad(squareMeters ?: 0.0, buildingType ?: "residential")
         )
 
         // Возвращаем обновленные данные о станциях с предсказанными потоками
-        return stationGraph.getAllStations().map { station ->
-            // Получаем текущий пассажиропоток из базы данных на момент времени datetime
-            val currentFlow = station.getFlowByDatetime(datetime) ?: 0
-            val predictedFlow = station.passengerLoad
-
-            // Добавляем предсказанный поток к текущему потоку
-            val totalFlow = currentFlow + predictedFlow
-
-            // Создаём DTO с обновленным пассажиропотоком
-            station.toDTO(totalFlow)
-        }
+        return stationGraph.getAllStations().map { station -> station.toDTO(station.passengerLoad) }
     }
 
 

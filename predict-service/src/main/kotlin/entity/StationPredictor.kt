@@ -3,13 +3,15 @@ package ru.itech.entity
 import predict.*
 
 class StationPredictor : Predictor() {
-
+    companion object {
+        private const val CENTER_RADIUS = 150;
+    }
     // Пример использования предсказания для конкретной станции
-    fun predictForStation(stationGraph: StationGraph, startStationIndex: Int, additionalLoad: Int, centerRadius: Int) {
+    fun predictForStation(stationGraph: StationGraph, startStationIndex: Int, additionalLoad: Int) {
         setGraph(stationGraph)
         setStartNodeIndex(startStationIndex)
         setAdditionalLoad(additionalLoad)
-        setCenterRadius(centerRadius)
+        setCenterRadius(CENTER_RADIUS)
         calculateLoad()
 
         // Вывести результат предсказания для всех станций

@@ -13,14 +13,6 @@ interface StationService {
 
     fun getStationById(id: Long): StationDTO
 
-    fun getStationsByDateTime(
-        line: String,
-        name: String,
-        squareMeters: Double?,
-        buildingType: String?,
-        datetime: String
-    ): List<Temp>
-
     fun createStation(stationDTO: StationDTO): StationDTO
 
     fun updateStation(
