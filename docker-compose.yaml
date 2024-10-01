@@ -1,0 +1,133 @@
+version: '3.8'
+
+services:
+  # Основная база данных PostgreSQL
+  postgres-db-master:
+    image: postgres:15-alpine
+    container_name: postgres-db-master
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1357
+      POSTGRES_DB: postgres
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres-master-data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    command: >
+      postgres -c wal_level=replica -c max_wal_senders=3 -c max_replication_slots=3
+    restart: always
+
+  # Реплика базы данных PostgreSQL
+  postgres-db-replica:
+    image: postgres:15-alpine
+    container_name: postgres-db-replica
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1357
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres-replica-data:/var/lib/postgresql/data
+    depends_on:
+      - postgres-db-master
+    networks:
+      - app-network
+    command: >
+      sh -c 'pg_basebackup -h postgres-db-master -D /var/lib/postgresql/data -U postgres -Fp -Xs -P -R && exec postgres'
+    restart: always
+
+  # Сервис Eureka
+  eureka-server:
+    build:
+      context: ./eureka-server
+      dockerfile: Dockerfile
+    container_name: eureka-server
+    ports:
+      - "8761:8761"
+    environment:
+      EUREKA_CLIENT_REGISTER_WITH_EUREKA: 'false'
+      EUREKA_CLIENT_FETCH_REGISTRY: 'false'
+    networks:
+      - app-network
+
+  # Первый экземпляр Auth Service
+  auth-service-1:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    container_name: auth-service-1
+    depends_on:
+      - postgres-db-master
+      - eureka-server
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-db-master:5432/postgres
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 1357
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka
+      SPRING_APPLICATION_NAME: auth-service
+    ports:
+      - "8001:8080"
+    networks:
+      - app-network
+
+  # Второй экземпляр Auth Service
+  auth-service-2:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    container_name: auth-service-2
+    depends_on:
+      - postgres-db-master
+      - eureka-server
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-db-master:5432/postgres
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 1357
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka
+      SPRING_APPLICATION_NAME: auth-service
+    ports:
+      - "8002:8080"
+    networks:
+      - app-network
+
+  # Сервис Gateway
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    container_name: gateway
+    depends_on:
+      - eureka-server
+    environment:
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka
+      SPRING_APPLICATION_NAME: gateway
+    ports:
+      - "8765:8765"
+    networks:
+      - app-network
+
+  # Load Balancer
+  load-balancer:
+    build:
+      context: ./load-balancer
+      dockerfile: Dockerfile
+    container_name: load-balancer
+    depends_on:
+      - auth-service-1
+      - auth-service-2
+    ports:
+      - "8003:8003"
+    networks:
+      - app-network
+
+# Хранилища для баз данных PostgreSQL
+volumes:
+  postgres-master-data:
+  postgres-replica-data:
+
+# Общая сеть для всех сервисов
+networks:
+  app-network:
+    driver: bridge

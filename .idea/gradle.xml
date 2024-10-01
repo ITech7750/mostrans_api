@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="GradleMigrationSettings" migrationVersion="1" />
+  <component name="GradleSettings">
+    <option name="linkedExternalProjectsSettings">
+      <GradleProjectSettings>
+        <option name="externalProjectPath" value="$PROJECT_DIR$" />
+        <option name="gradleHome" value="" />
+        <option name="modules">
+          <set>
+            <option value="$PROJECT_DIR$" />
+            <option value="$PROJECT_DIR$/auth-service-1" />
+            <option value="$PROJECT_DIR$/auth-service-2" />
+            <option value="$PROJECT_DIR$/auth-service-3" />
+            <option value="$PROJECT_DIR$/eureka-server" />
+            <option value="$PROJECT_DIR$/eureka-server-2" />
+            <option value="$PROJECT_DIR$/eureka-server-3" />
+            <option value="$PROJECT_DIR$/gateway" />
+            <option value="$PROJECT_DIR$/main-service" />
+            <option value="$PROJECT_DIR$/predict-service" />
+            <option value="$PROJECT_DIR$/predict-service/src" />
+            <option value="$PROJECT_DIR$/predict-service/src/main" />
+            <option value="$PROJECT_DIR$/predict-service/src/main/predict" />
+          </set>
+        </option>
+      </GradleProjectSettings>
+      <GradleProjectSettings>
+        <compositeConfiguration>
+          <compositeBuild compositeDefinitionSource="SCRIPT">
+            <builds>
+              <build path="$PROJECT_DIR$/auth-service/buildSrc" name="buildSrc">
+                <projects>
+                  <project path="$PROJECT_DIR$/auth-service/buildSrc" />
+                </projects>
+              </build>
+            </builds>
+          </compositeBuild>
+        </compositeConfiguration>
+        <option name="externalProjectPath" value="$PROJECT_DIR$/auth-service" />
+        <option name="modules">
+          <set>
+            <option value="$PROJECT_DIR$/auth-service" />
+            <option value="$PROJECT_DIR$/auth-service/buildSrc" />
+          </set>
+        </option>
+      </GradleProjectSettings>
+    </option>
+  </component>
+</project>
