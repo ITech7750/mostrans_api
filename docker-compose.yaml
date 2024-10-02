@@ -92,6 +92,39 @@ services:
     networks:
       - app-network
 
+  # Predict-service
+  predict-service:
+    build:
+      context: ./predict-service
+      dockerfile: Dockerfile
+    container_name: predict-service
+    depends_on:
+      - postgres-db-master
+      - eureka-server
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-db-master:5432/postgres
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 1357
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-server:8761/eureka
+      SPRING_APPLICATION_NAME: predict-service
+    ports:
+      - "8003:8081"
+    networks:
+      - app-network
+
+  # Telegram-service
+  telegram-service:
+    build:
+      context: ./telegram-service
+      dockerfile: Dockerfile
+    container_name: telegram-service
+    environment:
+      SPRING_APPLICATION_NAME: telegram-service
+    ports:
+      - "8004:8082"
+    networks:
+      - app-network
+
   # Сервис Gateway
   gateway:
     build:
@@ -118,7 +151,7 @@ services:
       - auth-service-1
       - auth-service-2
     ports:
-      - "8003:8003"
+      - "8005:8003"
     networks:
       - app-network
 
