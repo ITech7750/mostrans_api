@@ -9,7 +9,7 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import ru.itech.dto.PassengerFlowRequest
 import ru.itech.dto.StationDTO
-import ru.itech.dto.Temp
+import ru.itech.dto.StationFrontendDTO
 import ru.itech.service.StationService
 
 @RestController
@@ -19,7 +19,7 @@ class StationController(
     private val stationService: StationService,
 ) {
 
-    // 2. Создать новую станцию с параметрами
+    // 1. Создать новую станцию
     @Operation(summary = "Создать новую станцию", description = "Создаёт станцию с указанными параметрами")
     @PostMapping("/create")
     fun createStation(
@@ -29,7 +29,7 @@ class StationController(
         return ResponseEntity.ok(createdStation)
     }
 
-    // 3. Получить все станции с постраничным выводом
+    // 2. Получить все станции с постраничным выводом
     @Operation(summary = "Получить все станции", description = "Возвращает список станций с поддержкой постраничного вывода")
     @GetMapping
     fun getAllStations(
@@ -39,7 +39,7 @@ class StationController(
         return ResponseEntity.ok(stations)
     }
 
-    // 4. Обновить станцию по id
+    // 3. Обновить станцию по id
     @Operation(summary = "Обновить станцию", description = "Обновляет станцию по её идентификатору")
     @PutMapping("/{id}")
     fun updateStation(
@@ -50,7 +50,7 @@ class StationController(
         return ResponseEntity.ok(updatedStation)
     }
 
-    // 5. Удалить станцию по id
+    // 4. Удалить станцию по id
     @Operation(summary = "Удалить станцию", description = "Удаляет станцию по её идентификатору")
     @DeleteMapping("/{id}")
     fun deleteStation(
@@ -60,14 +60,13 @@ class StationController(
         return ResponseEntity.noContent().build()
     }
 
-
+    // 5. Прогнозирование пассажиропотока (StationDTO)
     @PostMapping("/predict")
-    @Operation(summary = "Прогнозирование пассажиропотока", description = "Прогнозирование пассажиропотока с StationDTO")
+    @Operation(summary = "Прогнозирование пассажиропотока", description = "Прогнозирование пассажиропотока с полными данными станции (StationDTO)")
     fun predictPassengerFlow(
         @Parameter(description = "Данные для прогноза", required = true)
         @RequestBody request: PassengerFlowRequest
     ): ResponseEntity<List<StationDTO>> {
-        // Вызываем сервис для предсказания
         val stations = stationService.predictPassengerFlow(
             line = request.line,
             name = request.name,
@@ -75,7 +74,23 @@ class StationController(
             buildingType = request.buildingType,
             datetime = request.datetime
         )
+        return ResponseEntity.ok(stations)
+    }
 
+    // 6. Прогнозирование пассажиропотока для фронтенда (StationFrontendDTO)
+    @PostMapping("/predict/frontend")
+    @Operation(summary = "Прогнозирование пассажиропотока для фронтенда", description = "Прогнозирование пассажиропотока с минимальной информацией для фронтенда")
+    fun predictPassengerFlowForFrontend(
+        @Parameter(description = "Данные для прогноза", required = true)
+        @RequestBody request: PassengerFlowRequest
+    ): ResponseEntity<List<StationFrontendDTO>> {
+        val stations = stationService.predictPassengerFlowForFrontend(
+            line = request.line,
+            name = request.name,
+            squareMeters = request.squareMeters,
+            buildingType = request.buildingType,
+            datetime = request.datetime
+        )
         return ResponseEntity.ok(stations)
     }
 }

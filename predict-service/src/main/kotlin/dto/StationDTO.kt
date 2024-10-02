@@ -18,9 +18,3 @@ fun StationDTO.toEntity(): Station {
     )
 }
 
-fun StationDTO.toTemp(): Temp {
-    return Temp(
-        name = this.name,
-        value = this.passengerFlow
-    )
-}

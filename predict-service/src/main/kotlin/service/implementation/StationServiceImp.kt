@@ -1,15 +1,11 @@
 package ru.itech.service.implementation
 
-import predict.Graph
-import predict.Predictor
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import ru.itech.dto.StationDTO
-import ru.itech.dto.Temp
+import ru.itech.dto.StationFrontendDTO
 import ru.itech.dto.toEntity
-import ru.itech.dto.toTemp
-import ru.itech.entity.toDTO
 import ru.itech.entity.StationGraph
 import ru.itech.entity.StationPredictor
 import ru.itech.repository.StationConnectionRepository
@@ -85,7 +81,9 @@ open class StationServiceImpl(
     fun calculateAdditionalLoad(squareMeters: Double, buildingType: String): Int {
         var people = squareMeters / when (buildingType) {
             "office" -> 35
+            "офисное" -> 35
             "residential" -> 25
+            "жилое" -> 25
             else -> throw Exception("Unknown building type '$buildingType'")
         }
 
@@ -96,7 +94,38 @@ open class StationServiceImpl(
         return people.toInt()
     }
 
+    override fun predictPassengerFlowForFrontend(
+        line: String,
+        name: String,
+        squareMeters: Double?,
+        buildingType: String?,
+        datetime: String
+    ): List<StationFrontendDTO> {
+        // Предсказание пассажиропотока с использованием существующего метода predict
+        val stations = predict(line, name, squareMeters, buildingType, datetime)
+
+        // Преобразование данных в StationFrontendDTO (только name и passengerFlow, делим на 10000)
+        return stations.map { stationDTO ->
+            StationFrontendDTO(
+                name = stationDTO.name,
+                passengerFlow = (stationDTO.passengerFlow?.div(10000.0)) ?: 0.0
+            )
+        }
+    }
+
+
+    // Остальные методы остаются без изменений...
     override fun predictPassengerFlow(
+        line: String,
+        name: String,
+        squareMeters: Double?,
+        buildingType: String?,
+        datetime: String
+    ): List<StationDTO> {
+        return predict(line, name, squareMeters, buildingType, datetime)
+    }
+
+    fun predict(
         line: String,
         name: String,
         squareMeters: Double?,
@@ -111,15 +140,14 @@ open class StationServiceImpl(
 
         // Строим граф станций
         val stationGraph = buildStationGraph(stations)
-        println("ok")
+
         // Поиск индекса станции по имени и линии
         val startStationIndex = stationGraph.getAllStations().indexOfFirst { it.name == name && it.line == line }
-
         if (startStationIndex == -1) {
             throw Exception("Station with name '$name' on line '$line' not found")
         }
 
-        // Предсказание пассажиропотока с использованием StationPredictor
+        // Предсказание пассажиропотока
         val predictor = StationPredictor()
         predictor.predictForStation(
             stationGraph = stationGraph,
@@ -130,9 +158,6 @@ open class StationServiceImpl(
         // Возвращаем обновленные данные о станциях с предсказанными потоками
         return stationGraph.getAllStations().map { station -> station.toDTO(station.passengerLoad) }
     }
-
-
-
     // Создание новой станции
     override fun createStation(stationDTO: StationDTO): StationDTO {
         // Преобразуем DTO в сущность

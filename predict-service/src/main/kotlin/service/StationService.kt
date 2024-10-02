@@ -3,7 +3,7 @@ package ru.itech.service
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import ru.itech.dto.StationDTO
-import ru.itech.dto.Temp
+import ru.itech.dto.StationFrontendDTO
 
 @Service
 interface StationService {
@@ -29,4 +29,12 @@ interface StationService {
         buildingType: String?,
         datetime: String
     ): List<StationDTO>
+
+    fun predictPassengerFlowForFrontend(
+    line: String,
+    name: String,
+    squareMeters: Double?,
+    buildingType: String?,
+    datetime: String
+    ): List<StationFrontendDTO>
 }
