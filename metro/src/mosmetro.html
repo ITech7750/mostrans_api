@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Нагруженность метро</title>
+    <meta name="description" content="Схема метро Москвы c расчётом пути. Схема действующих и строящихся линий и станций московского метро в 2023 году. Скачать векторную карту метро Москвы в SVG.">
+    <meta name="keywords" content="схема метро москвы, скачать svg векторную карту метро, мцк, мцд, mosmetro">
+    <link rel="icon" href="../img/fav.svg" type="image/svg+xml">
+    <style>
+        html, body, table, svg {
+            overflow: hidden;
+            border-collapse: collapse;
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            font-family: 'Oswald', sans-serif; /* Используем загруженный шрифт */
+        }
+
+        /* Стили для формы с белым фоном */
+        #form-container {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background-color: rgba(255, 255, 255, 0.9); /* Белый фон с небольшой прозрачностью */
+            padding: 20px;
+            border-radius: 10px;
+            z-index: 10; /* Форма будет сверху над картой */
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); /* Тень для формы */
+            border: 1px solid #ccc; /* Граница */
+            max-width: 300px; /* Ограничиваем ширину формы */
+        }
+
+        #form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px; /* Расстояние между элементами формы */
+        }
+
+        /* Стили для всех элементов формы */
+        input, select, button {
+            padding: 10px;
+            font-size: 14px; /* Размер текста */
+            width: 100%; /* Занимает всю ширину */
+            box-sizing: border-box; /* Учитываем padding при расчёте ширины */
+            border-radius: 5px; /* Скругленные углы */
+            border: 1px solid #ccc; /* Лёгкая граница */
+            font-family: 'Oswald', sans-serif; /* Применение шрифта к select */
+        }
+
+        label {
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        /* Стили для кнопки */
+        .loader-button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        .loader-button:hover {
+            background-color: #0056b3;
+        }
+
+        .loader {
+            display: none;
+        }
+
+        /* Стили для select, чтобы он выглядел как текст */
+        select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-color: white;
+            cursor: pointer;
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&display=swap" rel="stylesheet">
+</head>
+<body>
+<div id="form-container">
+    <div id="form">
+        <!-- Форма для данных -->
+        <label for="date">Дата:</label>
+        <input type="date" id="date" />
+
+        <label for="time">Время:</label>
+        <input type="time" id="time"/>
+
+     	<label for="line">Линия метро:</label>
+        <input type="text" id="line" name="line" placeholder="Введите линию метро"/>
+
+        <label for="name">Название станции:</label>
+        <input type="text" id="name" name="name" placeholder="Введите станцию"/>
+
+        <label for="squareMeters">Площадь (кв. м):</label>
+        <input type="number" id="squareMeters" name="squareMeters" placeholder="Введите площадь">
+
+        <label for="buildingType">Тип здания:</label>
+        <select id="buildingType" name="buildingType">
+            <option value="" disabled selected>Выберите тип здания</option>
+            <option value="жилое">Жилое</option>
+            <option value="офисное">Офисное</option>
+        </select>
+
+        <button id="submit" class="loader-button">
+            <span class="button-text">Предсказать</span>
+            <span class="loader"></span>
+        </button>
+    </div>
+</div>
+
+<div id="popup"></div>
+
+<!-- Для отображения таблицы -->
+<table>
+    <tr>
+        <td colspan="5" id="mcont" valign="bottom">
+            <div id="yandex_rtb_R-A-2277013-1" style="max-height:60px"></div>
+        </td>
+    </tr>
+</table>
+
+</body>
+<script src="index.js"></script>
+<script>
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    const hour = String(today.getHours()).padStart(2, '0');
+    const formattedDate = `${year}-${month}-${day}`;
+    document.getElementById('date').value = formattedDate;
+    document.getElementById('time').value = `${hour}:00`;
+</script>
+</html>
+

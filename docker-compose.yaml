@@ -155,6 +155,19 @@ services:
     networks:
       - app-network
 
+  # Frontend service (Metro)
+  metro:
+    build:
+      context: ./metro
+      dockerfile: Dockerfile
+    container_name: metro
+    ports:
+      - "8000:8000"  # порт для фронтенда
+    networks:
+      - app-network
+    depends_on:
+      - gateway
+
 # Хранилища для баз данных PostgreSQL
 volumes:
   postgres-master-data:
