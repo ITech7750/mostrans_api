@@ -5,7 +5,8 @@ import java.util.Collection;
 import java.util.Iterator;
 
 public class Graph implements Iterable<Graph.Node> {
-    public static class Node {
+
+    public static abstract class Node {
         public enum State {
             None,
             Queued,
@@ -13,30 +14,19 @@ public class Graph implements Iterable<Graph.Node> {
         }
 
         private ArrayList<Node> next = new ArrayList<>();
-        private int passengerLoad = 0;
-        private int distanceToCenter = 0;
         private State state = State.None;
 
         public Node() {
-            this.passengerLoad = 0;
-            this.distanceToCenter = 0;
+            // Конструктор без параметров
         }
 
         public Node(int passengerLoad, int distanceToCenter) {
             setPassengerLoad(passengerLoad);
-            this.distanceToCenter = distanceToCenter;
+            setDistanceToCenter(distanceToCenter);
         }
 
         public Collection<Node> getNext() {
             return next;
-        }
-
-        public int getPassengerLoad() {
-            return passengerLoad;
-        }
-
-        public void setPassengerLoad(int passengerLoad) {
-            this.passengerLoad = passengerLoad;
         }
 
         public State getState() {
@@ -47,9 +37,16 @@ public class Graph implements Iterable<Graph.Node> {
             this.state = state;
         }
 
-        public int getDistanceToCenter() {
-            return distanceToCenter;
+        public void addConnection(Node node) {
+            next.add(node);
         }
+
+        // Абстрактные методы для наследников
+        public abstract int getPassengerLoad();
+        public abstract void setPassengerLoad(int passengerLoad);
+
+        public abstract int getDistanceToCenter();
+        public abstract void setDistanceToCenter(int distanceToCenter);
     }
 
     private ArrayList<Node> nodes = new ArrayList<>();
@@ -71,6 +68,7 @@ public class Graph implements Iterable<Graph.Node> {
         addDirectedEdge(a, b);
         addDirectedEdge(b, a);
     }
+
     public boolean hasEdge(int a, int b) {
         Node nodeA = getNode(a);
         Node nodeB = getNode(b);

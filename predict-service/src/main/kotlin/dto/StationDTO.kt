@@ -1,7 +1,6 @@
 package ru.itech.dto
 
 import ru.itech.entity.Station
-import ru.itech.entity.StationPassengerFlow
 
 data class StationDTO(
     val id: Long? = null,

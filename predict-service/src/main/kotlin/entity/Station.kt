@@ -17,14 +17,30 @@ data class Station(
     val line: String,
 
     @Column(nullable = true)
-    var distanceFromCenter: Int = 0,  // Расстояние до центра
+    private var distanceFromCenter: Double = 0.0,  // Расстояние до центра
 
     @OneToMany(mappedBy = "station", cascade = [CascadeType.ALL], fetch = FetchType.EAGER)
     var passengerFlows: List<StationPassengerFlow> = mutableListOf()
 
-     // Список пассажиропотоков для разных временных промежутков
-) : Graph.Node(0, distanceFromCenter) {
+) : Graph.Node() {
 
+    override fun getPassengerLoad(): Int {
+        // Возвращаем текущий пассажиропоток (или значение по умолчанию)
+        return passengerFlows.maxByOrNull { it.datetime }?.passengerFlow ?: 0
+    }
+
+    override fun setPassengerLoad(passengerLoad: Int) {
+        // Можно добавить логику для обновления passengerLoad
+        // Но здесь просто пример с заглушкой
+    }
+
+    override fun getDistanceToCenter(): Int {
+        return distanceFromCenter.toInt()
+    }
+
+    override fun setDistanceToCenter(distanceToCenter: Int) {
+        this.distanceFromCenter = distanceToCenter.toDouble()
+    }
 
     fun getFlowByDatetime(datetime: String): Int? {
         return passengerFlows.find { it.datetime == datetime }?.passengerFlow
@@ -34,13 +50,12 @@ data class Station(
         this.getNext().add(station)
     }
 
+    fun toDTO(latestPassengerFlow: Int?): StationDTO {
+        return StationDTO(
+            id = this.id,
+            name = this.name,
+            line = this.line,
+            passengerFlow = latestPassengerFlow
+        )
+    }
 }
-public fun Station.toDTO(latestPassengerFlow: Int?): StationDTO {
-    return StationDTO(
-        id = this.id,
-        name = this.name,
-        line = this.line,
-        passengerFlow = latestPassengerFlow  // Передаем актуальный пассажиропоток
-    )
-}
-

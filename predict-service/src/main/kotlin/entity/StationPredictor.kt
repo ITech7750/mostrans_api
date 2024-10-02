@@ -16,7 +16,7 @@ class StationPredictor : Predictor() {
 
         // Вывести результат предсказания для всех станций
         stationGraph.getAllStations().forEach { station ->
-            println("Станция: ${station.name}, Пассажиропоток: ${station.passengerLoad}")
+            println("Станция: ${station.name}, Пассажиропоток: ${station.passengerLoad}, ${station.distanceToCenter}")
         }
 
 

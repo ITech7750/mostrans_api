@@ -10,7 +10,7 @@ data class StationPassengerFlow(
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "station_id", nullable = false)
-    val station: Station,
+    var station: Station,
 
     @Column(nullable = false)
     val datetime: String,

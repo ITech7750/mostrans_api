@@ -135,10 +135,25 @@ open class StationServiceImpl(
 
     // Создание новой станции
     override fun createStation(stationDTO: StationDTO): StationDTO {
+        // Преобразуем DTO в сущность
         val station = stationDTO.toEntity()
-        val latestPassengerFlow = stationPassengerFlowRepository.findTopByStationOrderByDatetimeDesc(station)?.passengerFlow
-        return stationRepository.save(station).toDTO(latestPassengerFlow)
+
+        // Сначала сохраняем сущность станции, чтобы она получила ID
+        val savedStation = stationRepository.save(station)
+
+        // Если есть пассажиропотоки, сохраняем их и связываем с сохраненной станцией
+        station.passengerFlows.forEach { passengerFlow ->
+            passengerFlow.station = savedStation  // Устанавливаем ссылку на сохраненную станцию
+            stationPassengerFlowRepository.save(passengerFlow)  // Сохраняем пассажиропотоки
+        }
+
+        // Находим последний пассажиропоток (если он есть) для этой станции
+        val latestPassengerFlow = stationPassengerFlowRepository.findTopByStationOrderByDatetimeDesc(savedStation)?.passengerFlow
+
+        // Возвращаем DTO сохраненной станции с последним пассажиропотоком
+        return savedStation.toDTO(latestPassengerFlow)
     }
+
 
     // Обновление станции по ID
     override fun updateStation(id: Long, stationDTO: StationDTO): StationDTO {
