@@ -32,6 +32,8 @@ data class Station(
     override fun setPassengerLoad(passengerLoad: Int) {
         // Можно добавить логику для обновления passengerLoad
         // Но здесь просто пример с заглушкой
+        var flow = passengerFlows.maxByOrNull { it.datetime }?.passengerFlow
+        if (flow != null) { flow = passengerLoad }
     }
 
     override fun getDistanceToCenter(): Int {

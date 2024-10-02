@@ -36,5 +36,5 @@ interface StationService {
     squareMeters: Double?,
     buildingType: String?,
     datetime: String
-    ): List<StationFrontendDTO>
+    ): Map<String, Map<String, Double>>
 }

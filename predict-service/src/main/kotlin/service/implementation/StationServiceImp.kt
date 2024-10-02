@@ -100,18 +100,21 @@ open class StationServiceImpl(
         squareMeters: Double?,
         buildingType: String?,
         datetime: String
-    ): List<StationFrontendDTO> {
+    ): Map<String, Map<String, Double>> {
         // Предсказание пассажиропотока с использованием существующего метода predict
         val stations = predict(line, name, squareMeters, buildingType, datetime)
-
-        // Преобразование данных в StationFrontendDTO (только name и passengerFlow, делим на 10000)
-        return stations.map { stationDTO ->
-            StationFrontendDTO(
-                name = stationDTO.name,
-                passengerFlow = (stationDTO.passengerFlow?.div(10000.0)) ?: 0.0
-            )
+        println(stations)
+        // Преобразование данных в Map<String, Double> (где ключ - имя станции, а значение - passengerFlow)
+        val stationFlows: Map<String, Double> = stations.associate { stationDTO ->
+            stationDTO.name to (stationDTO.passengerFlow?.toDouble()?.div(100000) ?: 10000.0)
         }
+        println(stationFlows)
+        // Возвращаем объект в формате Map<String, Map<String, Double>>
+        return mapOf("stations" to stationFlows)
     }
+
+
+
 
 
     // Остальные методы остаются без изменений...
@@ -140,6 +143,7 @@ open class StationServiceImpl(
 
         // Строим граф станций
         val stationGraph = buildStationGraph(stations)
+        //val prevFlow = stationGraph.getAllStations().map { station -> station.passengerLoad }
 
         // Поиск индекса станции по имени и линии
         val startStationIndex = stationGraph.getAllStations().indexOfFirst { it.name == name && it.line == line }

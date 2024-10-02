@@ -83,7 +83,7 @@ class StationController(
     fun predictPassengerFlowForFrontend(
         @Parameter(description = "Данные для прогноза", required = true)
         @RequestBody request: PassengerFlowRequest
-    ): ResponseEntity<List<StationFrontendDTO>> {
+    ): ResponseEntity<Map<String, Map<String, Double>>> {
         val stations = stationService.predictPassengerFlowForFrontend(
             line = request.line,
             name = request.name,
