@@ -1,0 +1,674 @@
+---
+# Namespace для ваших приложений
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: app-namespace
+---
+# PersistentVolume и PersistentVolumeClaim для postgres-master
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: postgres-master-pv
+  namespace: app-namespace
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: /mnt/data/postgres-master
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-master-pvc
+  namespace: app-namespace
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+# PersistentVolume и PersistentVolumeClaim для postgres-replica
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: postgres-replica-pv
+  namespace: app-namespace
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: /mnt/data/postgres-replica
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-replica-pvc
+  namespace: app-namespace
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+# Deployment и Service для postgres-db-master
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-db-master
+  namespace: app-namespace
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-master
+  template:
+    metadata:
+      labels:
+        app: postgres-master
+    spec:
+      containers:
+        - name: postgres-master
+          image: postgres:15-alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: "postgres"
+            - name: POSTGRES_PASSWORD
+              value: "1357"
+            - name: POSTGRES_DB
+              value: "postgres"
+          volumeMounts:
+            - name: postgres-master-storage
+              mountPath: /var/lib/postgresql/data
+          args:
+            - postgres
+            - -c
+            - wal_level=replica
+            - -c
+            - max_wal_senders=3
+            - -c
+            - max_replication_slots=3
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres"]
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres"]
+            initialDelaySeconds: 15
+            periodSeconds: 20
+      volumes:
+        - name: postgres-master-storage
+          persistentVolumeClaim:
+            claimName: postgres-master-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-db-master
+  namespace: app-namespace
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+      targetPort: 5432
+  selector:
+    app: postgres-master
+---
+# Deployment и Service для postgres-db-replica
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-db-replica
+  namespace: app-namespace
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-replica
+  template:
+    metadata:
+      labels:
+        app: postgres-replica
+    spec:
+      containers:
+        - name: postgres-replica
+          image: postgres:15-alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: "postgres"
+            - name: POSTGRES_PASSWORD
+              value: "1357"
+          volumeMounts:
+            - name: postgres-replica-storage
+              mountPath: /var/lib/postgresql/data
+          command: [ "sh", "-c", "pg_basebackup -h postgres-db-master.app-namespace.svc.cluster.local -D /var/lib/postgresql/data -U postgres -Fp -Xs -P -R && exec postgres" ]
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres"]
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres"]
+            initialDelaySeconds: 15
+            periodSeconds: 20
+      volumes:
+        - name: postgres-replica-storage
+          persistentVolumeClaim:
+            claimName: postgres-replica-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-db-replica
+  namespace: app-namespace
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+      targetPort: 5432
+  selector:
+    app: postgres-replica
+---
+# Deployment и Service для eureka-server
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eureka-server
+  namespace: app-namespace
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: eureka-server
+  template:
+    metadata:
+      labels:
+        app: eureka-server
+    spec:
+      containers:
+        - name: eureka-server
+          image: mostrans-eureka-server:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8761
+          env:
+            - name: EUREKA_CLIENT_REGISTER_WITH_EUREKA
+              value: "false"
+            - name: EUREKA_CLIENT_FETCH_REGISTRY
+              value: "false"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8761
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8761
+            initialDelaySeconds: 30
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: eureka-server
+  namespace: app-namespace
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8761
+      targetPort: 8761
+  selector:
+    app: eureka-server
+---
+# Deployment и Service для auth-service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  namespace: app-namespace
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: auth-service
+  template:
+    metadata:
+      labels:
+        app: auth-service
+    spec:
+      containers:
+        - name: auth-service
+          image: mostrans-auth-service-1:latest  # Локальный образ
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://postgres-db-master.app-namespace.svc.cluster.local:5432/postgres"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "postgres"
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: "1357"  # Рекомендуется использовать Secrets
+            - name: EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE
+              value: "http://eureka-server.app-namespace.svc.cluster.local:8761/eureka"
+            - name: SPRING_APPLICATION_NAME
+              value: "auth-service"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  namespace: app-namespace
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: auth-service
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: auth-service-hpa
+  namespace: app-namespace
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: auth-service
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+---
+# Deployment и Service для predict-service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: predict-service
+  namespace: app-namespace
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: predict-service
+  template:
+    metadata:
+      labels:
+        app: predict-service
+    spec:
+      containers:
+        - name: predict-service
+          image: mostrans-predict-service:latest  # Локальный образ
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8081
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:postgresql://postgres-db-master.app-namespace.svc.cluster.local:5432/postgres"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "postgres"
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: "1357"  # Рекомендуется использовать Secrets
+            - name: EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE
+              value: "http://eureka-server.app-namespace.svc.cluster.local:8761/eureka"
+            - name: SPRING_APPLICATION_NAME
+              value: "predict-service"
+          volumeMounts:
+            - name: predict-service-resources
+              mountPath: /app/resources
+          command: [ "sh", "-c", "cd /app/src/main/resources/ && ls" ]
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8081
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8081
+            initialDelaySeconds: 30
+            periodSeconds: 20
+      volumes:
+        - name: predict-service-resources
+          hostPath:
+            path: /path/to/your/predict-service/src/main/resources  # Измените на реальный путь
+            type: Directory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: predict-service
+  namespace: app-namespace
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8081
+      targetPort: 8081
+  selector:
+    app: predict-service
+---
+# Deployment и Service для telegram-service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: telegram-service
+  namespace: app-namespace
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: telegram-service
+  template:
+    metadata:
+      labels:
+        app: telegram-service
+    spec:
+      containers:
+        - name: telegram-service
+          image: mostrans-telegram-service:latest  # Локальный образ
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8004
+          env:
+            - name: SPRING_APPLICATION_NAME
+              value: "telegram-service"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8004
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8004
+            initialDelaySeconds: 30
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: telegram-service
+  namespace: app-namespace
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8004
+      targetPort: 8004
+  selector:
+    app: telegram-service
+---
+# Deployment и Service для gateway
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  namespace: app-namespace
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gateway
+  template:
+    metadata:
+      labels:
+        app: gateway
+    spec:
+      containers:
+        - name: gateway
+          image: mostrans-gateway:latest  # Локальный образ
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8765
+          env:
+            - name: EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE
+              value: "http://eureka-server.app-namespace.svc.cluster.local:8761/eureka"
+            - name: SPRING_APPLICATION_NAME
+              value: "gateway"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8765
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8765
+            initialDelaySeconds: 30
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+  namespace: app-namespace
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8765
+      targetPort: 8765
+  selector:
+    app: gateway
+---
+# Deployment и Service для load-balancer
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: load-balancer
+  namespace: app-namespace
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: load-balancer
+  template:
+    metadata:
+      labels:
+        app: load-balancer
+    spec:
+      containers:
+        - name: load-balancer
+          image: mostrans-load-balancer:latest  # Локальный образ
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8003
+          env:
+            - name: BACKEND_SERVICE_URL
+              value: "http://auth-service.app-namespace.svc.cluster.local:8080"
+            # Добавьте другие необходимые переменные окружения здесь, если есть
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8003
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8003
+            initialDelaySeconds: 30
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: load-balancer
+  namespace: app-namespace
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8005
+      targetPort: 8003
+  selector:
+    app: load-balancer
+---
+# Deployment и Service для metro
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metro
+  namespace: app-namespace
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: metro
+  template:
+    metadata:
+      labels:
+        app: metro
+    spec:
+      containers:
+        - name: metro
+          image: mostrans-metro:latest  # Локальный образ
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          env:
+            - name: API_BASE_URL
+              value: "http://gateway.app-namespace.svc.cluster.local:8765"
+            # Добавьте другие необходимые переменные окружения здесь, если есть
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: metro
+  namespace: app-namespace
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8000
+      targetPort: 8000
+  selector:
+    app: metro
+---
+# IngressClass для NGINX
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: nginx
+spec:
+  controller: k8s.io/ingress-nginx
+---
+# Ingress для внешнего доступа
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: app-ingress
+  namespace: app-namespace
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false" # Измените на "true", если используете SSL
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: your-domain.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: metro
+                port:
+                  number: 8000
+          - path: /auth
+            pathType: Prefix
+            backend:
+              service:
+                name: auth-service
+                port:
+                  number: 8080
+          - path: /predict
+            pathType: Prefix
+            backend:
+              service:
+                name: predict-service
+                port:
+                  number: 8081
+          - path: /telegram
+            pathType: Prefix
+            backend:
+              service:
+                name: telegram-service
+                port:
+                  number: 8004
+          - path: /gateway
+            pathType: Prefix
+            backend:
+              service:
+                name: gateway
+                port:
+                  number: 8765
+          - path: /load-balancer
+            pathType: Prefix
+            backend:
+              service:
+                name: load-balancer
+                port:
+                  number: 8005
+---
+# Service для Ingress NGINX Controller с типом NodePort
+apiVersion: v1
+kind: Service
+metadata:
+  name: ingress-nginx-controller
+  namespace: ingress-nginx
+spec:
+  type: NodePort
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+      nodePort: 32080  # Назначенный NodePort для HTTP
+    - name: https
+      port: 443
+      targetPort: 443
+      nodePort: 32443  # Назначенный NodePort для HTTPS
+  selector:
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/component: controller
