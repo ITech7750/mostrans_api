@@ -20,7 +20,7 @@ public class UserDataClient {
 
     public String sendUserData(UserData userData) {
         // Указываем URL сервера
-        String serverUrl = "http://localhost:8080/api/stations/predict";
+        String serverUrl = "http://predict-service:8081/api/stations/predict";
 
         // Устанавливаем заголовки
         HttpHeaders headers = new HttpHeaders();

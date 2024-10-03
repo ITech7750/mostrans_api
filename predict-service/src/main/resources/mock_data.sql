@@ -1,7 +1,5 @@
--- Удаление существующего уникального ограничения
 ALTER TABLE user_table DROP CONSTRAINT IF EXISTS unique_user_table;
 
--- Добавление нового уникального ограничения
 ALTER TABLE user_table ADD CONSTRAINT unique_user_table UNIQUE (login);
 
 INSERT INTO user_table (login, email, password) VALUES
@@ -11,10 +9,8 @@ INSERT INTO user_table (login, email, password) VALUES
 ON CONFLICT (login) DO NOTHING;
 
 
--- Удаление существующего ограничения, если оно есть
 ALTER TABLE stations DROP CONSTRAINT IF EXISTS unique_station_name_line;
 
--- Добавление нового уникального ограничения
 ALTER TABLE stations ADD CONSTRAINT unique_station_name_line UNIQUE (name, line, distance_from_center);
 
 INSERT INTO stations (name, line, distance_from_center) VALUES
@@ -270,10 +266,9 @@ INSERT INTO stations (name, line, distance_from_center) VALUES
                                                             ('Раменское', 'МЦД-3', 195.00)
 ON CONFLICT (name, line, distance_from_center) DO NOTHING;
 
--- Удаление существующего ограничения, если оно есть
+
 ALTER TABLE station_passenger_flow DROP CONSTRAINT IF EXISTS uniq_station_passenger_flow;
 
--- Добавление нового уникального ограничения
 ALTER TABLE station_passenger_flow ADD CONSTRAINT uniq_station_passenger_flow UNIQUE (station_id, datetime);
 
 INSERT INTO station_passenger_flow (station_id, datetime, passenger_flow) VALUES
@@ -294,10 +289,8 @@ INSERT INTO station_passenger_flow (station_id, datetime, passenger_flow) VALUES
                                                                               (5, '2023-12-15 10:00:00', 2200)
 ON CONFLICT (station_id,datetime) DO NOTHING;
 
--- Удаление существующего ограничения, если оно есть
 ALTER TABLE station_connections DROP CONSTRAINT IF EXISTS uniq_station_connections;
 
--- Добавление нового уникального ограничения
 ALTER TABLE station_connections ADD CONSTRAINT uniq_station_connections UNIQUE (station1_id, station2_id);
 
 

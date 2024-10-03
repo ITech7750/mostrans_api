@@ -82,8 +82,10 @@ open class StationServiceImpl(
         var people = squareMeters / when (buildingType) {
             "office" -> 35
             "офисное" -> 35
+            "Коммерческая" -> 35
             "residential" -> 25
             "жилое" -> 25
+            "Жилая" -> 25
             else -> throw Exception("Unknown building type '$buildingType'")
         }
 

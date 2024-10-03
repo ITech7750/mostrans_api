@@ -109,8 +109,13 @@ services:
       SPRING_APPLICATION_NAME: predict-service
     ports:
       - "8003:8081"
+    volumes:
+      - ./predict-service/src/main/resources:/app/resources
     networks:
       - app-network
+    command: >
+      sh -c 'cd /app/src/main/resources/ && ls'
+
 
   # Telegram-service
   telegram-service:
@@ -121,9 +126,11 @@ services:
     environment:
       SPRING_APPLICATION_NAME: telegram-service
     ports:
-      - "8004:8082"
+      - "8004:8004"
     networks:
       - app-network
+    depends_on:
+      - gateway
 
   # Сервис Gateway
   gateway:

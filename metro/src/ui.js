@@ -78,7 +78,7 @@ export const request = async (e) => {
 
         loader.startLoader();
 
-        const response = await fetch("http://127.0.0.1:8080/api/stations/predict/frontend", {
+        const response = await fetch("http://127.0.0.1:8003/api/stations/predict/frontend", {
         //const response = await fetch("http://127.0.0.1:5000", {
             method: "POST",
             headers: {

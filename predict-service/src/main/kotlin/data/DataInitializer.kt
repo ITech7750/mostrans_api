@@ -8,7 +8,9 @@ import org.springframework.context.event.ContextRefreshedEvent
 import org.springframework.context.event.EventListener
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Component
-import java.io.File
+import java.io.BufferedReader
+import java.io.InputStream
+import java.io.InputStreamReader
 
 @Component
 class DataInitializer(
@@ -19,9 +21,12 @@ class DataInitializer(
     @Transactional
     fun init() {
         try {
-            // Чтение SQL-файла
-            val sqlFile = File("predict-service/src/main/resources/mock_data.sql")
-            val sqlContent = sqlFile.readText()
+            // Получение InputStream для файла из ресурсов
+            val inputStream: InputStream = javaClass.classLoader.getResourceAsStream("mock_data.sql")
+                ?: throw IllegalArgumentException("Файл mock_data.sql не найден в ресурсах")
+
+            // Чтение SQL-файла с использованием InputStream
+            val sqlContent = BufferedReader(InputStreamReader(inputStream)).use { it.readText() }
 
             // Разделение SQL-команд по символу ';'
             val sqlCommands = sqlContent.split(";")
