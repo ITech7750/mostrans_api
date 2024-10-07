@@ -1,5 +1,4 @@
 ---
-# Namespace для ваших приложений
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -362,7 +361,7 @@ spec:
       volumes:
         - name: predict-service-resources
           hostPath:
-            path: /path/to/your/predict-service/src/main/resources  # Измените на реальный путь
+            path: /path/to/your/predict-service/src/main/resources  # Изменить на реальный путь
             type: Directory
 ---
 apiVersion: v1
@@ -559,7 +558,7 @@ spec:
           env:
             - name: API_BASE_URL
               value: "http://gateway.app-namespace.svc.cluster.local:8765"
-            # Добавьте другие необходимые переменные окружения здесь, если есть
+            # Можно добавить другие необходимые переменные окружения здесь, если есть
           readinessProbe:
             httpGet:
               path: /actuator/health
@@ -602,7 +601,7 @@ metadata:
   namespace: app-namespace
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
-    nginx.ingress.kubernetes.io/ssl-redirect: "false" # Измените на "true", если используете SSL
+    nginx.ingress.kubernetes.io/ssl-redirect: "false" # Изменить на "true", если используете SSL
 spec:
   ingressClassName: nginx
   rules:
